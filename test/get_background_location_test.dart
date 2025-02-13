@@ -9,7 +9,7 @@ class MockGetBackgroundLocationPlatform
     implements GetBackgroundLocationPlatform {
 
   @override
-  Future<String?> getPlatformVersion() => Future.value('42');
+  Future<String?> getLocationBackground() => Future.value('42');
 }
 
 void main() {

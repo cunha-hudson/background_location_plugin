@@ -23,6 +23,8 @@ abstract class GetBackgroundLocationPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion();
+   Stream<Map<String, double>> get locationStream;
+   Future<void> startService();
+  Future<void> stopService();
 
 }

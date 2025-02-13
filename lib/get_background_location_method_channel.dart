@@ -7,11 +7,38 @@ import 'get_background_location_platform_interface.dart';
 class MethodChannelGetBackgroundLocation extends GetBackgroundLocationPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('get_background_location');
+  static const MethodChannel _methodChannel = MethodChannel('get_background_location');
+
+  static const EventChannel _eventChannel = EventChannel('location_stream');
 
   @override
-  Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>('startLocationService');
-    return version;
+   Stream<Map<String, double>> get locationStream {
+    return _eventChannel.receiveBroadcastStream().map((event) {
+      final location = event as Map<dynamic, dynamic>;
+      return {
+        'latitude': location['latitude'] as double,
+        'longitude': location['longitude'] as double,
+      };
+    });
   }
+
+
+  @override
+   Future<void> startService() async {
+    try {
+      await _methodChannel.invokeMethod('startService');
+    } catch (e) {
+      print("Erro ao iniciar serviço: $e");
+    }
+  }
+
+  @override
+   Future<void> stopService() async {
+    try {
+      await _methodChannel.invokeMethod('stopService');
+    } catch (e) {
+      print("Erro ao parar serviço: $e");
+    }
+  }
+
 }
