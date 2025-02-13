@@ -18,14 +18,14 @@ class GeolocationService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
-    private var checkInterval: Long = 10000
+    private var checkInterval: Long = 10000 // 10 segundos
     private val handler = Handler(Looper.getMainLooper())
     private val permissionChecker = object : Runnable {
         override fun run() {
             if (!checkPermissions()) {
-                stopSelf() // Para o serviço se a permissão for removida
+                stopSelf()
             } else {
-                handler.postDelayed(this, checkInterval) // Verifica novamente em 10 segundos
+                handler.postDelayed(this, checkInterval)
             }
         }
     }
@@ -35,7 +35,6 @@ class GeolocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Obtém o intervalo passado pelo usuário (padrão: 10 segundos)
         checkInterval = intent?.getLongExtra("CHECK_INTERVAL", 10000) ?: 10000
 
         if (!checkPermissions()) {
@@ -44,8 +43,6 @@ class GeolocationService : Service() {
         }
 
         update()
-
-        // Inicia a verificação periódica com o intervalo definido pelo usuário
         handler.post(permissionChecker)
 
         return START_STICKY
@@ -102,13 +99,6 @@ class GeolocationService : Service() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return
         }
         fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
