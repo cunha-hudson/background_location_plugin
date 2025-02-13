@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
@@ -19,6 +20,7 @@ class GeolocationService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
     private var checkInterval: Long = 10000 // 10 segundos
+    private var appName: String = "Location"
     private val handler = Handler(Looper.getMainLooper())
     private val permissionChecker = object : Runnable {
         override fun run() {
@@ -36,6 +38,9 @@ class GeolocationService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         checkInterval = intent?.getLongExtra("CHECK_INTERVAL", 10000) ?: 10000
+        appName = intent?.getStringExtra("APP_NAME") ?: "Location"
+
+        startForeground(1, criarNotificacao())
 
         if (!checkPermissions()) {
             stopSelf()
@@ -50,13 +55,10 @@ class GeolocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-
         if (!checkPermissions()) {
             stopSelf()
             return
         }
-
-        startForeground(1, criarNotificacao())
 
     }
 
@@ -129,7 +131,7 @@ class GeolocationService : Service() {
         )
 
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Localização Ativa")
+            .setContentTitle(appName)
             .setContentText("Toque para abrir o aplicativo.")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentIntent(pendingIntent) // Associa o intent à notificação

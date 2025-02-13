@@ -3,6 +3,8 @@ package br.com.brilliantmachine.get_background_location
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -36,11 +38,22 @@ class GetBackgroundLocationPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       }
     })
   }
+  fun getAppName(): String {
+    val packageManager: PackageManager = context.packageManager
+    val applicationInfo = context.applicationInfo
+    val appName = packageManager.getApplicationLabel(applicationInfo) as String
+    Log.e("erro nome","name $appName")
+    return appName
+  }
 
   override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
     when (call.method) {
       "startService" -> {
-        val intent = Intent(context, GeolocationService::class.java)
+        val interval = call.argument<Int>("CHECK_INTERVAL")?.toLong() ?: 10000
+        val intent = Intent(context, GeolocationService::class.java).apply {
+          putExtra("CHECK_INTERVAL",interval)
+          putExtra("APP_NAME",getAppName())
+        }
         context.startForegroundService(intent)
         result.success("Serviço de localização iniciado")
       }

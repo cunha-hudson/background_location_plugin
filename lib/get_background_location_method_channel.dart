@@ -25,7 +25,9 @@ class MethodChannelGetBackgroundLocation extends GetBackgroundLocationPlatform {
   @override
    Future<void> startService() async {
     try {
-      await _methodChannel.invokeMethod('startService');
+      await _methodChannel.invokeMethod('startService', {
+        "CHECK_INTERVAL": 10000, // Passa o intervalo escolhido pelo usuário
+      });
     } catch (e) {
       if (kDebugMode) {
         print("Erro ao iniciar serviço: $e");
