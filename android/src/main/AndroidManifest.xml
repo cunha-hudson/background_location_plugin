@@ -16,5 +16,12 @@
             android:foregroundServiceType="location"
             android:permission="android.permission.FOREGROUND_SERVICE"
             android:exported="false"/>
+        <receiver
+            android:name=".LocationBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_LOCATION_UPDATE" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

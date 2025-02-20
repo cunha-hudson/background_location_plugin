@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-
 import 'get_background_location_platform_interface.dart';
 
 /// An implementation of [GetBackgroundLocationPlatform] that uses method channels.
@@ -11,7 +10,7 @@ class MethodChannelGetBackgroundLocation extends GetBackgroundLocationPlatform {
   static const EventChannel _eventChannel = EventChannel('location_stream');
 
   @override
-   Stream<Map<String, double>> get locationStream {
+  Stream<Map<String, double>> get locationStream {
     return _eventChannel.receiveBroadcastStream().map((event) {
       final location = event as Map<dynamic, dynamic>;
       return {

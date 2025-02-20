@@ -2,38 +2,38 @@ package br.com.brilliantmachine.get_background_location
 
 import android.Manifest
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
 import io.flutter.plugin.common.EventChannel
 
 class GeolocationService : Service() {
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var locationRequest: LocationRequest
     private var checkInterval: Long = 10000 // 10 segundos
     private var appName: String = "Location"
+
     private val handler = Handler(Looper.getMainLooper())
     private val permissionChecker = object : Runnable {
         override fun run() {
             if (!checkPermissions()) {
+                showNotification("Permissão de localização não concedida.", "Por favor, conceda a permissão para o app funcionar corretamente.")
                 stopSelf()
             } else {
                 handler.postDelayed(this, checkInterval)
             }
         }
-    }
-
-    companion object {
-        var eventSink: EventChannel.EventSink? = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -43,23 +43,26 @@ class GeolocationService : Service() {
         startForeground(1, criarNotificacao())
 
         if (!checkPermissions()) {
+            showNotification("Permissão de localização não concedida.", "Por favor, conceda a permissão para o app funcionar corretamente.")
             stopSelf()
+            return START_NOT_STICKY
+        }
+        if (!isLocationEnabled()) {
+            stopSelf()
+            showNotification("Geolocalização desativada", "Por favor, ative a geolocalização nas configurações do dispositivo.")
             return START_NOT_STICKY
         }
 
         update()
         handler.post(permissionChecker)
 
-        return START_STICKY
+        return START_REDELIVER_INTENT
     }
 
-    override fun onCreate() {
-        super.onCreate()
-        if (!checkPermissions()) {
-            stopSelf()
-            return
-        }
-
+    private fun isLocationEnabled(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     private fun checkPermissions(): Boolean {
@@ -77,7 +80,7 @@ class GeolocationService : Service() {
         return true
     }
 
-    private fun update(){
+    private fun update() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
@@ -88,23 +91,29 @@ class GeolocationService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
-                    eventSink?.success(mapOf("latitude" to location.latitude, "longitude" to location.longitude))
+                    val locationData = mapOf(
+                        "latitude" to location.latitude,
+                        "longitude" to location.longitude
+                    )
+                    Log.d("location:","$locationData")
+
+                    // Envia as atualizações via Broadcast
+                    val intent = Intent("ACTION_LOCATION_UPDATE").apply {
+                        putExtra("latitude", location.latitude)
+                        putExtra("longitude", location.longitude)
+                    }
+
+                    sendBroadcast(intent)  // Envia o broadcast para todos os ouvintes
                 }
             }
         }
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
-        fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
 
+        fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
     }
 
     private fun criarNotificacao(): Notification {
@@ -146,5 +155,39 @@ class GeolocationService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
+    }
+
+    private fun showNotification(title: String, message: String) {
+        val channelId = "geolocalizacao_channel"
+        val channelName = "Serviço de Localização"
+        val manager = getSystemService(NotificationManager::class.java)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                channelName,
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+        }
+
+        val intent = packageManager?.getLaunchIntentForPackage(packageName)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        manager?.notify(1, notification)
     }
 }

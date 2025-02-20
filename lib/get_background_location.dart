@@ -8,8 +8,8 @@ class GetBackgroundLocation {
     return _interface.locationStream;
   }
 
-  void startServiceLocation(){
-    _interface.startService();
+  Future<void> startServiceLocation()async {
+     await _interface.startService();
   }
 
    void finishServiceLocation(){
